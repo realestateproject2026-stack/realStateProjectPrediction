@@ -136,6 +136,10 @@ const buyerSchema = new mongoose.Schema({
 });
 
 const Buyer = mongoose.model('Buyer', buyerSchema);
+const isDbConnected = () => mongoose.connection.readyState === 1;
+
+// Temporary in-memory fallback so app flows still work when DB is offline.
+const buyerOtpStore = new Map();
 
 app.get('/', (req, res) => {
     res.send('Hello World');
@@ -326,6 +330,14 @@ app.get('/api/seller/listing/:id', async (req, res) => {
 
 app.get('/api/seller/properties', async (req, res) => {
     try {
+        if (!isDbConnected()) {
+            return res.status(200).json({
+                status: 200,
+                properties: [],
+                warning: 'Database offline. No saved properties available.'
+            });
+        }
+
         const properties = await Seller.find().sort({ createdAt: -1 });
         res.status(200).json({ status: 200, properties });
     } catch (error) {
@@ -352,26 +364,33 @@ app.get('/api/buyer/property/:id', async (req, res) => {
 app.post('/api/buyer/login', async (req, res) => {
     try {
         const { mobileNumber } = req.body;
-        
-        // Generate OTP (for demo, use 123456)
         const otp = '123456';
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
         
-        // Find or create buyer
-        let buyer = await Buyer.findOne({ mobileNumber });
-        if (buyer) {
-            buyer.otp = otp;
-            buyer.otpExpiry = otpExpiry;
-            buyer.isVerified = false;
-            await buyer.save();
+        if (isDbConnected()) {
+            // Find or create buyer
+            let buyer = await Buyer.findOne({ mobileNumber });
+            if (buyer) {
+                buyer.otp = otp;
+                buyer.otpExpiry = otpExpiry;
+                buyer.isVerified = false;
+                await buyer.save();
+            } else {
+                buyer = new Buyer({
+                    mobileNumber,
+                    otp,
+                    otpExpiry,
+                    isVerified: false
+                });
+                await buyer.save();
+            }
         } else {
-            buyer = new Buyer({
+            buyerOtpStore.set(mobileNumber, {
                 mobileNumber,
                 otp,
                 otpExpiry,
                 isVerified: false
             });
-            await buyer.save();
         }
         
         // In production, send OTP via SMS
@@ -396,8 +415,13 @@ app.post('/api/buyer/login', async (req, res) => {
 app.post('/api/buyer/verify-otp', async (req, res) => {
     try {
         const { mobileNumber, otp } = req.body;
-        
-        const buyer = await Buyer.findOne({ mobileNumber });
+        let buyer;
+
+        if (isDbConnected()) {
+            buyer = await Buyer.findOne({ mobileNumber });
+        } else {
+            buyer = buyerOtpStore.get(mobileNumber);
+        }
         
         if (!buyer) {
             return res.status(404).json({ 
@@ -420,9 +444,17 @@ app.post('/api/buyer/verify-otp', async (req, res) => {
             });
         }
         
-        buyer.isVerified = true;
-        buyer.otp = null;
-        await buyer.save();
+        if (isDbConnected()) {
+            buyer.isVerified = true;
+            buyer.otp = null;
+            await buyer.save();
+        } else {
+            buyerOtpStore.set(mobileNumber, {
+                ...buyer,
+                isVerified: true,
+                otp: null
+            });
+        }
         
         res.status(200).json({ 
             status: 200, 
