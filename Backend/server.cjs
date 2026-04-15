@@ -182,24 +182,37 @@ app.post('/predict-price', async (req, res) => {
 
         const prediction = await mlResponse.json();
 
-        // Save prediction to database
-        const property = new Property({
-            location,
-            sq_ft,
-            age,
-            furnishing,
-            amenities_count,
-            bedrooms,
-            bathrooms,
-            predicted_price: prediction.predicted_price
-        });
+        // Save prediction only if DB is connected; do not block core prediction flow.
+        let propertyId = null;
+        let warning = null;
 
-        await property.save();
+        if (mongoose.connection.readyState === 1) {
+            try {
+                const property = new Property({
+                    location,
+                    sq_ft,
+                    age,
+                    furnishing,
+                    amenities_count,
+                    bedrooms,
+                    bathrooms,
+                    predicted_price: prediction.predicted_price
+                });
+                await property.save();
+                propertyId = property._id;
+            } catch (dbError) {
+                console.error('Prediction generated but failed to save property:', dbError);
+                warning = 'Prediction generated, but failed to save to database';
+            }
+        } else {
+            warning = 'Prediction generated, but database is offline';
+        }
 
         res.status(200).json({
             status: 200,
             ...prediction,
-            property_id: property._id
+            property_id: propertyId,
+            warning
         });
     } catch (error) {
         console.error('Error predicting price:', error);
