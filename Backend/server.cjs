@@ -48,7 +48,7 @@ const upload = multer({
 app.use('/media', express.static(path.join(process.cwd(), 'media')));
 
 // MongoDB connection string
-const mongoURI = '';
+const mongoURI = process.env.MONGODB_URI;
 
 // Connect to MongoDB
 mongoose.connect(mongoURI)
