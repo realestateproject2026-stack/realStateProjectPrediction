@@ -3,6 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const app = express();
 const port = 3000;
 const mongoose = require('mongoose');
@@ -317,6 +318,10 @@ app.get('/api/seller/my-listings/:phoneNumber', async (req, res) => {
 // Get single listing by ID
 app.get('/api/seller/listing/:id', async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ status: 400, message: 'Invalid listing ID' });
+        }
+
         const listing = await Seller.findById(req.params.id);
         if (!listing) {
             return res.status(404).json({ status: 404, message: 'Listing not found' });
@@ -349,6 +354,10 @@ app.get('/api/seller/properties', async (req, res) => {
 // Get property details for buyer
 app.get('/api/buyer/property/:id', async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ status: 400, message: 'Invalid property ID' });
+        }
+
         const property = await Seller.findById(req.params.id);
         if (!property) {
             return res.status(404).json({ status: 404, message: 'Property not found' });
