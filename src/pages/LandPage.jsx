@@ -102,14 +102,14 @@ function LandPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-purple-900 mb-2">
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">
               🏞️ Add Land Details
             </h1>
-            <p className="text-purple-600">Complete land information for listing</p>
+            <p className="text-slate-600">Complete land information for listing</p>
           </div>
 
           {submitted && (
@@ -120,12 +120,12 @@ function LandPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Location & Basic Info */}
-            <div className="border-b border-purple-200 pb-6">
-              <h2 className="text-2xl font-semibold text-purple-800 mb-4">Location & Basic Information</h2>
+            <div className="border-b border-slate-200 pb-6">
+              <h2 className="text-2xl font-semibold text-slate-800 mb-4">Location & Basic Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Location (for prediction) *
                   </label>
                   <select
@@ -133,7 +133,7 @@ function LandPage() {
                     value={formData.location}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="">Select Location</option>
                     <option value="Downtown">Downtown</option>
@@ -146,7 +146,7 @@ function LandPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Property Type *
                   </label>
                   <select
@@ -154,7 +154,7 @@ function LandPage() {
                     value={formData.propertyType}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="Residential">Residential</option>
                     <option value="Commercial">Commercial</option>
@@ -164,7 +164,7 @@ function LandPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Square Footage (sq ft) *
                   </label>
                   <input
@@ -174,12 +174,12 @@ function LandPage() {
                     onChange={handleChange}
                     required
                     min="100"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Property Age (years) *
                   </label>
                   <input
@@ -189,12 +189,12 @@ function LandPage() {
                     onChange={handleChange}
                     required
                     min="0"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Furnishing *
                   </label>
                   <select
@@ -202,7 +202,7 @@ function LandPage() {
                     value={formData.furnishing}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="">Select</option>
                     <option value="Furnished">Furnished</option>
@@ -212,7 +212,7 @@ function LandPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Amenities Count
                   </label>
                   <input
@@ -222,12 +222,12 @@ function LandPage() {
                     onChange={handleChange}
                     min="0"
                     max="20"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Bedrooms
                   </label>
                   <input
@@ -237,12 +237,12 @@ function LandPage() {
                     onChange={handleChange}
                     min="1"
                     max="10"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Bathrooms
                   </label>
                   <input
@@ -252,19 +252,19 @@ function LandPage() {
                     onChange={handleChange}
                     min="1"
                     max="10"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
               </div>
             </div>
 
             {/* Address */}
-            <div className="border-b border-purple-200 pb-6">
-              <h2 className="text-2xl font-semibold text-purple-800 mb-4">Address</h2>
+            <div className="border-b border-slate-200 pb-6">
+              <h2 className="text-2xl font-semibold text-slate-800 mb-4">Address</h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Full Address *
                   </label>
                   <textarea
@@ -273,43 +273,43 @@ function LandPage() {
                     onChange={handleChange}
                     required
                     rows="3"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Street address, building number"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-purple-700 mb-2">City *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">City *</label>
                     <input
                       type="text"
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-purple-700 mb-2">State *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">State *</label>
                     <input
                       type="text"
                       name="state"
                       value={formData.state}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-purple-700 mb-2">Pincode *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Pincode *</label>
                     <input
                       type="text"
                       name="pincode"
                       value={formData.pincode}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -317,12 +317,12 @@ function LandPage() {
             </div>
 
             {/* File Uploads */}
-            <div className="border-b border-purple-200 pb-6">
-              <h2 className="text-2xl font-semibold text-purple-800 mb-4">Images & Documents</h2>
+            <div className="border-b border-slate-200 pb-6">
+              <h2 className="text-2xl font-semibold text-slate-800 mb-4">Images & Documents</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Property Images (Max 10)
                   </label>
                   <input
@@ -330,15 +330,15 @@ function LandPage() {
                     accept="image/*"
                     multiple
                     onChange={handleImageChange}
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                   {images.length > 0 && (
-                    <p className="text-sm text-purple-600 mt-2">{images.length} image(s) selected</p>
+                    <p className="text-sm text-slate-600 mt-2">{images.length} image(s) selected</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Documents/PDFs (Max 5)
                   </label>
                   <input
@@ -346,10 +346,10 @@ function LandPage() {
                     accept=".pdf"
                     multiple
                     onChange={handleDocumentChange}
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                   {documents.length > 0 && (
-                    <p className="text-sm text-purple-600 mt-2">{documents.length} document(s) selected</p>
+                    <p className="text-sm text-slate-600 mt-2">{documents.length} document(s) selected</p>
                   )}
                 </div>
               </div>
@@ -357,7 +357,7 @@ function LandPage() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-purple-700 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Description
               </label>
               <textarea
@@ -365,7 +365,7 @@ function LandPage() {
                 value={formData.description}
                 onChange={handleChange}
                 rows="4"
-                className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Describe your land, nearby amenities, etc."
               />
             </div>
@@ -373,7 +373,7 @@ function LandPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-purple-800 text-white py-3 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-purple-900 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-lg font-semibold text-lg hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Submitting...' : '💾 Save Land Details'}
             </button>

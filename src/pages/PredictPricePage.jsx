@@ -1,20 +1,29 @@
 import { useState, useEffect } from 'react';
+import PropertyMap from '../components/PropertyMap';
+import PageShell from '../components/PageShell';
+
+const DEFAULT_CENTER = { lat: 13.0827, lng: 80.2707 };
+
+const inputClass =
+  'w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-colors';
 
 function PredictPricePage() {
   const [formData, setFormData] = useState({
-    location: '',
+    location_name: '',
+    latitude: DEFAULT_CENTER.lat,
+    longitude: DEFAULT_CENTER.lng,
     sq_ft: '',
     age: '',
     furnishing: '',
     amenities_count: '',
     bedrooms: '1',
-    bathrooms: '1'
+    bathrooms: '1',
   });
 
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [locations, setLocations] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [furnishingTypes, setFurnishingTypes] = useState([]);
   const [mlServiceStatus, setMlServiceStatus] = useState(null);
 
@@ -23,22 +32,27 @@ function PredictPricePage() {
       try {
         const [locationsRes, furnishingRes] = await Promise.all([
           fetch('http://localhost:5001/locations'),
-          fetch('http://localhost:5001/furnishing-types')
+          fetch('http://localhost:5001/furnishing-types'),
         ]);
 
         if (locationsRes.ok) {
           const locData = await locationsRes.json();
-          setLocations(locData.locations || []);
-          if (locData.locations && locData.locations.length > 0) {
-            setFormData(prev => ({ ...prev, location: locData.locations[0] }));
+          setAreas(locData.areas || []);
+          if (locData.areas?.length > 0) {
+            setFormData((prev) => ({
+              ...prev,
+              location_name: locData.areas[0].name,
+              latitude: locData.areas[0].lat,
+              longitude: locData.areas[0].lng,
+            }));
           }
         }
 
         if (furnishingRes.ok) {
           const furnData = await furnishingRes.json();
           setFurnishingTypes(furnData.furnishing_types || []);
-          if (furnData.furnishing_types && furnData.furnishing_types.length > 0) {
-            setFormData(prev => ({ ...prev, furnishing: furnData.furnishing_types[0] }));
+          if (furnData.furnishing_types?.length > 0) {
+            setFormData((prev) => ({ ...prev, furnishing: furnData.furnishing_types[0] }));
           }
         }
       } catch (err) {
@@ -53,7 +67,7 @@ function PredictPricePage() {
         const response = await fetch('http://localhost:3000/ml-service/health');
         const data = await response.json();
         setMlServiceStatus(data);
-      } catch (err) {
+      } catch {
         setMlServiceStatus({ status: 'error', model_loaded: false });
       }
     };
@@ -63,9 +77,25 @@ function PredictPricePage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAreaSelect = (e) => {
+    const area = areas.find((item) => item.name === e.target.value);
+    if (!area) return;
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      location_name: area.name,
+      latitude: area.lat,
+      longitude: area.lng,
+    }));
+  };
+
+  const handleLocationChange = (latitude, longitude) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude: Number(latitude.toFixed(6)),
+      longitude: Number(longitude.toFixed(6)),
     }));
   };
 
@@ -78,9 +108,7 @@ function PredictPricePage() {
     try {
       const response = await fetch('http://localhost:3000/predict-price', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
@@ -91,92 +119,140 @@ function PredictPricePage() {
       } else {
         setError(data.error || 'Failed to get prediction');
       }
-    } catch (err) {
-      setError('Error connecting to server. Make sure both backend and ML service are running.');
-      console.error('Prediction error:', err);
+    } catch {
+      setError('Cannot reach server. Ensure backend and ML service are running.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-purple-900 mb-2">
-            🔮 AI Price Predictor
-          </h1>
-          <p className="text-purple-600 text-lg">Get instant property price predictions powered by Machine Learning</p>
-          {mlServiceStatus && (
-            <div className={`mt-4 inline-block px-4 py-2 rounded-full font-semibold ${
-              mlServiceStatus.model_loaded 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              ML Service: {mlServiceStatus.model_loaded ? '✅ Online' : '❌ Offline'}
-            </div>
-          )}
+    <PageShell
+      title="AI Price Predictor"
+      subtitle="Multimodal machine learning with geospatial embeddings — pin a location and get an instant estimate."
+    >
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <span className="font-medium text-slate-800">ML Service</span>
+          <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+              mlServiceStatus?.model_loaded
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                mlServiceStatus?.model_loaded ? 'bg-emerald-500' : 'bg-red-500'
+              }`}
+            />
+            {mlServiceStatus?.model_loaded ? 'Online' : 'Offline'}
+          </span>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Form */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-2xl font-bold text-purple-900 mb-6">Property Details</h2>
-            <form onSubmit={handlePredict} className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="lg:col-span-3">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+            <h2 className="text-lg font-semibold text-slate-900 mb-6">Property details</h2>
+            <form onSubmit={handlePredict} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-purple-700 mb-2">Location *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Area</label>
                 <select
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  name="location_name"
+                  value={formData.location_name}
+                  onChange={handleAreaSelect}
+                  className={inputClass}
                 >
-                  {locations.map(loc => (
-                    <option key={loc} value={loc}>{loc}</option>
+                  {areas.map((area) => (
+                    <option key={area.name} value={area.name}>
+                      {area.name}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-purple-700 mb-2">Square Footage (sq ft) *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Location on map
+                </label>
+                <PropertyMap
+                  latitude={formData.latitude}
+                  longitude={formData.longitude}
+                  onLocationChange={handleLocationChange}
+                  areas={areas}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Latitude</label>
+                  <input
+                    type="number"
+                    name="latitude"
+                    value={formData.latitude}
+                    onChange={handleChange}
+                    step="0.000001"
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Longitude</label>
+                  <input
+                    type="number"
+                    name="longitude"
+                    value={formData.longitude}
+                    onChange={handleChange}
+                    step="0.000001"
+                    required
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Square footage *
+                </label>
                 <input
                   type="number"
                   name="sq_ft"
                   value={formData.sq_ft}
                   onChange={handleChange}
                   min="100"
-                  max="10000"
                   required
-                  className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="e.g. 1500"
+                  className={inputClass}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">Property Age (years)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Age (years)</label>
                   <input
                     type="number"
                     name="age"
                     value={formData.age}
                     onChange={handleChange}
                     min="0"
-                    max="100"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="0"
+                    className={inputClass}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">Furnishing *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Furnishing</label>
                   <select
                     name="furnishing"
                     value={formData.furnishing}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className={inputClass}
                   >
-                    {furnishingTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
+                    {furnishingTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -184,119 +260,125 @@ function PredictPricePage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">Bedrooms</label>
-                  <input
-                    type="number"
-                    name="bedrooms"
-                    value={formData.bedrooms}
-                    onChange={handleChange}
-                    min="1"
-                    max="10"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Beds</label>
+                  <input type="number" name="bedrooms" value={formData.bedrooms} onChange={handleChange} min="1" className={inputClass} />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">Bathrooms</label>
-                  <input
-                    type="number"
-                    name="bathrooms"
-                    value={formData.bathrooms}
-                    onChange={handleChange}
-                    min="1"
-                    max="10"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Baths</label>
+                  <input type="number" name="bathrooms" value={formData.bathrooms} onChange={handleChange} min="1" className={inputClass} />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">Amenities</label>
-                  <input
-                    type="number"
-                    name="amenities_count"
-                    value={formData.amenities_count}
-                    onChange={handleChange}
-                    min="0"
-                    max="20"
-                    className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Amenities</label>
+                  <input type="number" name="amenities_count" value={formData.amenities_count} onChange={handleChange} min="0" className={inputClass} />
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-purple-800 text-white py-3 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-purple-900 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50"
+                className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold shadow-sm shadow-emerald-600/20 transition-colors"
               >
-                {loading ? 'Predicting...' : '🔮 Predict Price'}
+                {loading ? 'Computing estimate…' : 'Get price estimate'}
               </button>
             </form>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-                ❌ {error}
-              </div>
-            )}
-          </div>
-
-          {/* Results */}
-          <div>
-            {prediction && (
-              <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl shadow-2xl p-8 text-white">
-                <h2 className="text-3xl font-bold mb-6">💰 Predicted Price</h2>
-                <div className="text-center mb-8">
-                  <div className="text-6xl font-bold mb-2">{prediction.formatted_price}</div>
-                  <p className="text-purple-200">AI-Powered Prediction</p>
-                </div>
-
-                {prediction.feature_importance && (
-                  <div className="bg-white bg-opacity-20 rounded-xl p-6 mb-6">
-                    <h3 className="text-xl font-semibold mb-4">Feature Importance</h3>
-                    <div className="space-y-3">
-                      {Object.entries(prediction.feature_importance).map(([feature, importance]) => (
-                        <div key={feature} className="flex items-center space-x-3">
-                          <span className="text-sm w-32 capitalize">{feature.replace('_', ' ')}</span>
-                          <div className="flex-1 bg-white bg-opacity-30 rounded-full h-4 overflow-hidden">
-                            <div 
-                              className="bg-white h-full rounded-full transition-all"
-                              style={{ width: `${importance * 100}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm w-12 text-right">{(importance * 100).toFixed(1)}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-white bg-opacity-20 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold mb-4">Input Summary</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><span className="opacity-75">Location:</span> <span className="font-semibold">{prediction.input_features.location}</span></div>
-                    <div><span className="opacity-75">Area:</span> <span className="font-semibold">{prediction.input_features.sq_ft} sq ft</span></div>
-                    <div><span className="opacity-75">Age:</span> <span className="font-semibold">{prediction.input_features.age} years</span></div>
-                    <div><span className="opacity-75">Furnishing:</span> <span className="font-semibold">{prediction.input_features.furnishing}</span></div>
-                    <div><span className="opacity-75">Bedrooms:</span> <span className="font-semibold">{prediction.input_features.bedrooms}</span></div>
-                    <div><span className="opacity-75">Bathrooms:</span> <span className="font-semibold">{prediction.input_features.bathrooms}</span></div>
-                    <div className="col-span-2"><span className="opacity-75">Amenities:</span> <span className="font-semibold">{prediction.input_features.amenities_count}</span></div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!prediction && (
-              <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-                <div className="text-6xl mb-4">🏠</div>
-                <h3 className="text-2xl font-semibold text-purple-900 mb-2">Ready to Predict</h3>
-                <p className="text-purple-600">Fill in the form and click "Predict Price" to get an AI-powered estimate</p>
+              <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
               </div>
             )}
           </div>
         </div>
+
+        <div className="lg:col-span-2">
+          {prediction ? (
+            <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white sticky top-24">
+              <p className="text-emerald-400 text-sm font-medium uppercase tracking-wide">
+                Estimated value
+              </p>
+              <p className="text-4xl sm:text-5xl font-bold mt-2 tracking-tight">
+                {prediction.formatted_price}
+              </p>
+              <p className="text-slate-400 text-sm mt-2">
+                {prediction.input_features?.location_name} · {prediction.input_features?.sq_ft} sq ft
+              </p>
+
+              {prediction.geo_embedding && (
+                <div className="mt-8 pt-6 border-t border-slate-700">
+                  <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-4">
+                    Geospatial embedding
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-slate-800/60 rounded-lg px-3 py-2">
+                      <span className="text-slate-500">sin(lat)</span>
+                      <p className="font-mono text-emerald-300">{prediction.geo_embedding.sin_lat.toFixed(4)}</p>
+                    </div>
+                    <div className="bg-slate-800/60 rounded-lg px-3 py-2">
+                      <span className="text-slate-500">cos(lat)</span>
+                      <p className="font-mono text-emerald-300">{prediction.geo_embedding.cos_lat.toFixed(4)}</p>
+                    </div>
+                    <div className="bg-slate-800/60 rounded-lg px-3 py-2">
+                      <span className="text-slate-500">sin(lng)</span>
+                      <p className="font-mono text-emerald-300">{prediction.geo_embedding.sin_lng.toFixed(4)}</p>
+                    </div>
+                    <div className="bg-slate-800/60 rounded-lg px-3 py-2">
+                      <span className="text-slate-500">cos(lng)</span>
+                      <p className="font-mono text-emerald-300">{prediction.geo_embedding.cos_lng.toFixed(4)}</p>
+                    </div>
+                    <div className="col-span-2 bg-slate-800/60 rounded-lg px-3 py-2">
+                      <span className="text-slate-500">Distance to center</span>
+                      <p className="font-mono text-emerald-300">
+                        {prediction.geo_embedding.dist_to_center_km.toFixed(2)} km
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {prediction.feature_importance && (
+                <div className="mt-6 pt-6 border-t border-slate-700">
+                  <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-4">
+                    Feature importance
+                  </h3>
+                  <div className="space-y-3">
+                    {Object.entries(prediction.feature_importance)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 6)
+                      .map(([feature, importance]) => (
+                        <div key={feature}>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>{feature}</span>
+                            <span>{(importance * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full"
+                              style={{ width: `${importance * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 border-dashed p-10 text-center sticky top-24">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Awaiting input</h3>
+              <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">
+                Fill in property details and submit to see your AI-powered price estimate here.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 
 export default PredictPricePage;
-

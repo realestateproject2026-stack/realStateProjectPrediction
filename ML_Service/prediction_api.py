@@ -1,173 +1,208 @@
 """
-Flask API for Real Estate Price Prediction
-Provides endpoint to predict property prices using trained ML model
+Flask API for geospatial house price prediction.
 """
 
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import joblib
-import numpy as np
 import json
 import os
+
+import joblib
+import numpy as np
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+from geo_utils import build_geo_features, load_geo_config
 
 app = Flask(__name__)
 CORS(app)
 
-# Load model and encoders
-MODEL_PATH = 'models/property_price_model.pkl'
-LOCATION_ENCODER_PATH = 'models/location_encoder.pkl'
-FURNISHING_ENCODER_PATH = 'models/furnishing_encoder.pkl'
-FEATURE_NAMES_PATH = 'models/feature_names.json'
+MODEL_PATH = "models/property_price_model.pkl"
+FURNISHING_ENCODER_PATH = "models/furnishing_encoder.pkl"
+FEATURE_NAMES_PATH = "models/feature_names.json"
+FEATURE_LABELS_PATH = "models/feature_labels.json"
 
 model = None
-le_location = None
 le_furnishing = None
 feature_names = None
+feature_labels = None
+geo_config = None
+
 
 def load_model():
-    """Load the trained model and encoders"""
-    global model, le_location, le_furnishing, feature_names
-    
+    global model, le_furnishing, feature_names, feature_labels, geo_config
+
     try:
         if not os.path.exists(MODEL_PATH):
             return False, "Model not found. Please train the model first."
-        
-        model = joblib.load(MODEL_PATH)
-        le_location = joblib.load(LOCATION_ENCODER_PATH)
-        le_furnishing = joblib.load(FURNISHING_ENCODER_PATH)
-        
-        with open(FEATURE_NAMES_PATH, 'r') as f:
-            feature_names = json.load(f)
-        
-        return True, "Model loaded successfully"
-    except Exception as e:
-        return False, f"Error loading model: {str(e)}"
 
-# Load model on startup
+        model = joblib.load(MODEL_PATH)
+        le_furnishing = joblib.load(FURNISHING_ENCODER_PATH)
+        geo_config = load_geo_config()
+
+        with open(FEATURE_NAMES_PATH, "r", encoding="utf-8") as file:
+            feature_names = json.load(file)
+
+        if os.path.exists(FEATURE_LABELS_PATH):
+            with open(FEATURE_LABELS_PATH, "r", encoding="utf-8") as file:
+                feature_labels = json.load(file)
+        else:
+            feature_labels = {name: name for name in feature_names}
+
+        return True, "Model loaded successfully"
+    except Exception as error:
+        return False, f"Error loading model: {error}"
+
+
 success, message = load_model()
 if success:
     print(f"✅ {message}")
 else:
     print(f"❌ {message}")
 
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'model_loaded': model is not None
-    })
 
-@app.route('/predict', methods=['POST'])
+def build_feature_vector(data):
+    latitude = float(data.get("latitude"))
+    longitude = float(data.get("longitude"))
+    sq_ft = float(data.get("sq_ft", 0))
+    age = int(data.get("age", 0))
+    furnishing = data.get("furnishing")
+    amenities_count = int(data.get("amenities_count", 0))
+    bedrooms = int(data.get("bedrooms", 1))
+    bathrooms = int(data.get("bathrooms", 1))
+
+    if sq_ft <= 0:
+        raise ValueError("sq_ft must be greater than 0")
+
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        raise ValueError("latitude/longitude are out of range")
+
+    geo_features = build_geo_features(
+        latitude,
+        longitude,
+        geo_config["center_lat"],
+        geo_config["center_lng"],
+    )
+
+    try:
+        furnishing_encoded = le_furnishing.transform([furnishing])[0]
+    except ValueError as error:
+        raise ValueError(
+            f"Unknown furnishing type: {furnishing}. Available: {list(le_furnishing.classes_)}"
+        ) from error
+
+    values = {
+        **geo_features,
+        "sq_ft": sq_ft,
+        "age": age,
+        "furnishing_encoded": furnishing_encoded,
+        "amenities_count": amenities_count,
+        "bedrooms": bedrooms,
+        "bathrooms": bathrooms,
+    }
+
+    vector = np.array([[values[name] for name in feature_names]])
+    return vector, values, geo_features, furnishing_encoded
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify(
+        {
+            "status": "healthy",
+            "model_loaded": model is not None,
+            "model_type": "geospatial_multimodal_phase1",
+        }
+    )
+
+
+@app.route("/predict", methods=["POST"])
 def predict():
-    """Predict property price based on input features"""
     if model is None:
-        return jsonify({
-            'error': 'Model not loaded. Please train the model first.'
-        }), 500
-    
+        return jsonify({"error": "Model not loaded. Please train the model first."}), 500
+
     try:
         data = request.json
-        
-        # Extract features
-        location = data.get('location')
-        sq_ft = float(data.get('sq_ft', 0))
-        age = int(data.get('age', 0))
-        furnishing = data.get('furnishing')
-        amenities_count = int(data.get('amenities_count', 0))
-        bedrooms = int(data.get('bedrooms', 1))
-        bathrooms = int(data.get('bathrooms', 1))
-        
-        # Validate inputs
-        if not location or sq_ft <= 0:
-            return jsonify({
-                'error': 'Invalid input: location and sq_ft are required'
-            }), 400
-        
-        # Encode categorical features
-        try:
-            location_encoded = le_location.transform([location])[0]
-        except ValueError:
-            return jsonify({
-                'error': f'Unknown location: {location}. Available locations: {list(le_location.classes_)}'
-            }), 400
-        
-        try:
-            furnishing_encoded = le_furnishing.transform([furnishing])[0]
-        except ValueError:
-            return jsonify({
-                'error': f'Unknown furnishing type: {furnishing}. Available: {list(le_furnishing.classes_)}'
-            }), 400
-        
-        # Prepare feature array
-        features = np.array([[
-            location_encoded,
-            sq_ft,
-            age,
-            furnishing_encoded,
-            amenities_count,
-            bedrooms,
-            bathrooms
-        ]])
-        
-        # Make prediction
+        latitude = data.get("latitude")
+        longitude = data.get("longitude")
+
+        if latitude is None or longitude is None:
+            return jsonify(
+                {"error": "latitude and longitude are required for geospatial prediction"}
+            ), 400
+
+        features, raw_values, geo_features, furnishing_encoded = build_feature_vector(data)
         prediction = model.predict(features)[0]
-        
-        # Get feature importance (if available)
+
         feature_importance = None
-        if hasattr(model, 'feature_importances_'):
+        if hasattr(model, "feature_importances_"):
             feature_importance = {
-                'location': float(model.feature_importances_[0]),
-                'sq_ft': float(model.feature_importances_[1]),
-                'age': float(model.feature_importances_[2]),
-                'furnishing': float(model.feature_importances_[3]),
-                'amenities_count': float(model.feature_importances_[4]),
-                'bedrooms': float(model.feature_importances_[5]),
-                'bathrooms': float(model.feature_importances_[6]),
+                feature_labels.get(name, name): float(score)
+                for name, score in zip(feature_names, model.feature_importances_)
             }
-        
-        return jsonify({
-            'predicted_price': round(float(prediction), 2),
-            'formatted_price': f"${prediction:,.2f}",
-            'input_features': {
-                'location': location,
-                'sq_ft': sq_ft,
-                'age': age,
-                'furnishing': furnishing,
-                'amenities_count': amenities_count,
-                'bedrooms': bedrooms,
-                'bathrooms': bathrooms
-            },
-            'feature_importance': feature_importance
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'error': f'Prediction error: {str(e)}'
-        }), 500
 
-@app.route('/locations', methods=['GET'])
-def get_locations():
-    """Get available locations"""
-    if le_location is None:
-        return jsonify({'error': 'Model not loaded'}), 500
-    
-    return jsonify({
-        'locations': list(le_location.classes_)
-    })
+        location_name = data.get("location_name") or data.get("location") or "Selected on map"
 
-@app.route('/furnishing-types', methods=['GET'])
+        return jsonify(
+            {
+                "predicted_price": round(float(prediction), 2),
+                "formatted_price": f"₹{prediction:,.2f}",
+                "input_features": {
+                    "location_name": location_name,
+                    "latitude": float(latitude),
+                    "longitude": float(longitude),
+                    "sq_ft": raw_values["sq_ft"],
+                    "age": raw_values["age"],
+                    "furnishing": data.get("furnishing"),
+                    "amenities_count": raw_values["amenities_count"],
+                    "bedrooms": raw_values["bedrooms"],
+                    "bathrooms": raw_values["bathrooms"],
+                },
+                "geo_embedding": geo_features,
+                "feature_importance": feature_importance,
+            }
+        )
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception as error:
+        return jsonify({"error": f"Prediction error: {error}"}), 500
+
+
+@app.route("/geo-config", methods=["GET"])
+def get_geo_config():
+    if geo_config is None:
+        return jsonify({"error": "Model not loaded"}), 500
+
+    return jsonify(geo_config)
+
+
+@app.route("/furnishing-types", methods=["GET"])
 def get_furnishing_types():
-    """Get available furnishing types"""
     if le_furnishing is None:
-        return jsonify({'error': 'Model not loaded'}), 500
-    
-    return jsonify({
-        'furnishing_types': list(le_furnishing.classes_)
-    })
+        return jsonify({"error": "Model not loaded"}), 500
 
-if __name__ == '__main__':
-    print("🚀 Starting Real Estate Prediction API...")
+    return jsonify({"furnishing_types": list(le_furnishing.classes_)})
+
+
+# Backward-compatible alias
+@app.route("/locations", methods=["GET"])
+def get_locations():
+    if geo_config is None:
+        return jsonify({"error": "Model not loaded"}), 500
+
+    areas = geo_config.get("areas", [])
+    return jsonify(
+        {
+            "locations": [area["name"] for area in areas],
+            "areas": areas,
+            "center": {
+                "lat": geo_config["center_lat"],
+                "lng": geo_config["center_lng"],
+            },
+            "city": geo_config.get("city", "Chennai"),
+        }
+    )
+
+
+if __name__ == "__main__":
+    print("🚀 Starting Geospatial House Price Prediction API...")
     print("📡 API running on http://localhost:5001")
-    app.run(host='0.0.0.0', port=5001, debug=True)
-
+    app.run(host="0.0.0.0", port=5001, debug=True)

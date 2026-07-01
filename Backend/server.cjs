@@ -59,13 +59,22 @@ const User = mongoose.model('User', user);
 
 // Property Schema for Real Estate
 const propertySchema = new mongoose.Schema({
-    location: String,
+    location_name: String,
+    latitude: Number,
+    longitude: Number,
     sq_ft: Number,
     age: Number,
     furnishing: String,
     amenities_count: Number,
     bedrooms: Number,
     bathrooms: Number,
+    geo_embedding: {
+        sin_lat: Number,
+        cos_lat: Number,
+        sin_lng: Number,
+        cos_lng: Number,
+        dist_to_center_km: Number,
+    },
     predicted_price: Number,
     actual_price: Number,
     createdAt: { type: Date, default: Date.now }
@@ -87,8 +96,11 @@ const sellerSchema = new mongoose.Schema({
     propertyType: String,
     price: Number,
     description: String,
-    // Prediction fields
-    location: String, // For ML prediction
+    // Geospatial + prediction fields
+    location_name: String,
+    latitude: Number,
+    longitude: Number,
+    location: String,
     sq_ft: Number,
     age: Number,
     furnishing: String,
@@ -137,16 +149,28 @@ app.post('/save-user', (req, res) => {
 // Real Estate Property Endpoints
 app.post('/predict-price', async (req, res) => {
     try {
-        const { location, sq_ft, age, furnishing, amenities_count, bedrooms, bathrooms } = req.body;
+        const {
+            location_name,
+            location,
+            latitude,
+            longitude,
+            sq_ft,
+            age,
+            furnishing,
+            amenities_count,
+            bedrooms,
+            bathrooms
+        } = req.body;
 
-        // Call ML service for prediction
         const mlResponse = await fetch('http://localhost:5001/predict', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                location,
+                location_name: location_name || location,
+                latitude,
+                longitude,
                 sq_ft,
                 age,
                 furnishing,
@@ -163,20 +187,22 @@ app.post('/predict-price', async (req, res) => {
 
         const prediction = await mlResponse.json();
 
-        // Save prediction only if DB is connected; do not block core prediction flow.
         let propertyId = null;
         let warning = null;
 
         if (mongoose.connection.readyState === 1) {
             try {
                 const property = new Property({
-                    location,
+                    location_name: prediction.input_features?.location_name || location_name || location,
+                    latitude: prediction.input_features?.latitude ?? latitude,
+                    longitude: prediction.input_features?.longitude ?? longitude,
                     sq_ft,
                     age,
                     furnishing,
                     amenities_count,
                     bedrooms,
                     bathrooms,
+                    geo_embedding: prediction.geo_embedding,
                     predicted_price: prediction.predicted_price
                 });
                 await property.save();
