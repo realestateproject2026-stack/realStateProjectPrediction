@@ -41,6 +41,25 @@ def load_model():
         with open(FEATURE_NAMES_PATH, "r", encoding="utf-8") as file:
             feature_names = json.load(file)
 
+        if "location_encoded" in feature_names:
+            return (
+                False,
+                "Outdated model detected (location_encoded). Run: python3 train_model.py",
+            )
+
+        if not os.path.exists(os.path.join("models", "geo_config.json")):
+            return (
+                False,
+                "Missing geo_config.json. Run: python3 train_model.py",
+            )
+
+        required_geo = {"sin_lat", "cos_lat", "sin_lng", "cos_lng", "dist_to_center_km"}
+        if not required_geo.issubset(set(feature_names)):
+            return (
+                False,
+                "Model missing geospatial features. Run: python3 train_model.py",
+            )
+
         if os.path.exists(FEATURE_LABELS_PATH):
             with open(FEATURE_LABELS_PATH, "r", encoding="utf-8") as file:
                 feature_labels = json.load(file)
