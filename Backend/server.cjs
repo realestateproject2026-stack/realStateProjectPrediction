@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { connectDB, printMongoTroubleshooting } = require('./config/db.cjs');
 const app = express();
 const port = 3000;
 const mongoose = require('mongoose');
@@ -47,31 +48,6 @@ const upload = multer({
 
 // Serve uploaded files
 app.use('/media', express.static(path.join(process.cwd(), 'media')));
-
-// MongoDB connection string
-const mongoURI = process.env.MONGODB_URI;
-
-// Connect to MongoDB
-mongoose.connect(mongoURI)
-  .then(() => {
-    console.log('✅ Mongoose connected successfully to MongoDB');
-  })
-  .catch((error) => {
-    console.error('❌ Mongoose connection error:', error);
-  });
-
-// Connection event listeners
-mongoose.connection.on('connected', () => {
-  console.log('✅ Mongoose is connected to MongoDB');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('❌ Mongoose connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('⚠️ Mongoose disconnected from MongoDB');
-});
 
 const user = new mongoose.Schema({
     name: String,
@@ -483,6 +459,14 @@ app.post('/api/buyer/verify-otp', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+connectDB(process.env.MONGODB_URI || process.env.MONGO_URI)
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  })
+  .catch((error) => {
+    console.error('❌ Mongo connection failed:', error.message);
+    printMongoTroubleshooting(error);
+    process.exit(1);
+  });
