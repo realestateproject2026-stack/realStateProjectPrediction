@@ -10,10 +10,20 @@ EARTH_RADIUS_KM = 6371.0
 GEO_CONFIG_PATH = os.path.join("models", "geo_config.json")
 
 # Chennai metro center (default study area)
+DEFAULT_AREAS = [
+    {"name": "Anna Nagar", "lat": 13.0850, "lng": 80.2101},
+    {"name": "OMR / Sholinganallur", "lat": 12.9010, "lng": 80.2279},
+    {"name": "T Nagar", "lat": 13.0418, "lng": 80.2341},
+    {"name": "Velachery", "lat": 12.9750, "lng": 80.2206},
+    {"name": "Porur", "lat": 13.0358, "lng": 80.1562},
+    {"name": "Ambattur", "lat": 13.1143, "lng": 80.1548},
+]
+
 DEFAULT_GEO_CONFIG = {
     "city": "Chennai",
     "center_lat": 13.0827,
     "center_lng": 80.2707,
+    "areas": DEFAULT_AREAS,
 }
 
 
@@ -66,5 +76,11 @@ def save_geo_config(config, path=GEO_CONFIG_PATH):
 def load_geo_config(path=GEO_CONFIG_PATH):
     if not os.path.exists(path):
         return DEFAULT_GEO_CONFIG.copy()
+
     with open(path, "r", encoding="utf-8") as file:
-        return json.load(file)
+        config = json.load(file)
+
+    if not config.get("areas"):
+        config["areas"] = DEFAULT_AREAS
+
+    return config

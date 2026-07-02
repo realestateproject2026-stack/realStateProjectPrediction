@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import PropertyMap from '../components/PropertyMap';
 import PageShell from '../components/PageShell';
-
-const DEFAULT_CENTER = { lat: 13.0827, lng: 80.2707 };
+import {
+  DEFAULT_AREAS,
+  DEFAULT_CENTER,
+  DEFAULT_FURNISHING,
+  normalizeAreas,
+} from '../constants/areas';
 
 const inputClass =
   'w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-colors';
@@ -29,35 +33,41 @@ function PredictPricePage() {
 
   useEffect(() => {
     const fetchOptions = async () => {
+      let resolvedAreas = DEFAULT_AREAS;
+      let resolvedFurnishing = DEFAULT_FURNISHING;
+
       try {
         const [locationsRes, furnishingRes] = await Promise.all([
-          fetch('http://localhost:5001/locations'),
-          fetch('http://localhost:5001/furnishing-types'),
+          fetch('http://localhost:3000/ml-service/locations'),
+          fetch('http://localhost:3000/ml-service/furnishing-types'),
         ]);
 
         if (locationsRes.ok) {
           const locData = await locationsRes.json();
-          setAreas(locData.areas || []);
-          if (locData.areas?.length > 0) {
-            setFormData((prev) => ({
-              ...prev,
-              location_name: locData.areas[0].name,
-              latitude: locData.areas[0].lat,
-              longitude: locData.areas[0].lng,
-            }));
-          }
+          resolvedAreas = normalizeAreas(locData);
+        } else {
+          console.warn('Locations API failed, using default areas');
         }
 
         if (furnishingRes.ok) {
           const furnData = await furnishingRes.json();
-          setFurnishingTypes(furnData.furnishing_types || []);
           if (furnData.furnishing_types?.length > 0) {
-            setFormData((prev) => ({ ...prev, furnishing: furnData.furnishing_types[0] }));
+            resolvedFurnishing = furnData.furnishing_types;
           }
         }
       } catch (err) {
-        console.error('Error fetching options:', err);
+        console.error('Error fetching options, using defaults:', err);
       }
+
+      setAreas(resolvedAreas);
+      setFurnishingTypes(resolvedFurnishing);
+      setFormData((prev) => ({
+        ...prev,
+        location_name: resolvedAreas[0].name,
+        latitude: resolvedAreas[0].lat,
+        longitude: resolvedAreas[0].lng,
+        furnishing: resolvedFurnishing[0],
+      }));
     };
 
     fetchOptions();
@@ -163,12 +173,17 @@ function PredictPricePage() {
                   value={formData.location_name}
                   onChange={handleAreaSelect}
                   className={inputClass}
+                  required
                 >
-                  {areas.map((area) => (
-                    <option key={area.name} value={area.name}>
-                      {area.name}
-                    </option>
-                  ))}
+                  {areas.length === 0 ? (
+                    <option value="">Loading areas...</option>
+                  ) : (
+                    areas.map((area) => (
+                      <option key={area.name} value={area.name}>
+                        {area.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 

@@ -262,6 +262,28 @@ app.get('/ml-service/health', async (req, res) => {
     }
 });
 
+app.get('/ml-service/locations', async (req, res) => {
+    try {
+        const response = await fetch('http://localhost:5001/locations');
+        const data = await response.json();
+        res.status(response.ok ? 200 : response.status).json(data);
+    } catch (error) {
+        console.error('ML locations proxy error:', error);
+        res.status(500).json({ error: 'Could not fetch locations from ML service' });
+    }
+});
+
+app.get('/ml-service/furnishing-types', async (req, res) => {
+    try {
+        const response = await fetch('http://localhost:5001/furnishing-types');
+        const data = await response.json();
+        res.status(response.ok ? 200 : response.status).json(data);
+    } catch (error) {
+        console.error('ML furnishing-types proxy error:', error);
+        res.status(500).json({ error: 'Could not fetch furnishing types from ML service' });
+    }
+});
+
 // Seller Endpoints
 app.post('/api/seller/register', upload.fields([
     { name: 'images', maxCount: 10 },
